@@ -9,3 +9,6 @@ class Task(Base):
     description = Column(String)
     status = Column(String)
     assigned_to = Column(Integer)
+    priority = Column(String, default="Medium")
+    eta = Column(String, nullable=True)
+    update_url = Column(String, nullable=True)

@@ -23,6 +23,9 @@ class TaskCreate(BaseModel):
     title: str
     description: str
     assigned_to: int
+    priority: str = "Medium"
+    eta: str | None = None
+    update_url: str | None = None
 
 
 class TaskResponse(BaseModel):
@@ -31,6 +34,9 @@ class TaskResponse(BaseModel):
     description: str
     status: str
     assigned_to: int
+    priority: str
+    eta: str | None = None
+    update_url: str | None = None
 
     class Config:
         from_attributes = True
