@@ -7,11 +7,7 @@ function StatusRequestForm() {
 
   const handleRequest = async () => {
     try {
-
-      const user = JSON.parse(
-        localStorage.getItem("user")
-      );
-
+      const user = JSON.parse(localStorage.getItem("user"));
       if (!user) {
         alert("Please login again");
         return;
@@ -24,10 +20,8 @@ function StatusRequestForm() {
       });
 
       alert("Status Change Request Sent!");
-
       setTaskId("");
       setStatus("In Progress");
-
     } catch (error) {
       console.error(error);
       alert("Failed to send request");
@@ -35,38 +29,24 @@ function StatusRequestForm() {
   };
 
   return (
-    <div>
+    <div className="dashboard-section" style={{ marginTop: "32px" }}>
       <h2>Request Status Change</h2>
-
-      <input
-        type="number"
-        placeholder="Task ID"
-        value={taskId}
-        onChange={(e) =>
-          setTaskId(e.target.value)
-        }
-      />
-
-      <br />
-      <br />
-
-      <select
-        value={status}
-        onChange={(e) =>
-          setStatus(e.target.value)
-        }
-      >
-        <option>Not Started</option>
-        <option>In Progress</option>
-        <option>Completed</option>
-      </select>
-
-      <br />
-      <br />
-
-      <button onClick={handleRequest}>
-        Request Status Change
-      </button>
+      <div className="task-form">
+        <input
+          type="number"
+          placeholder="Enter Task ID"
+          value={taskId}
+          onChange={(e) => setTaskId(e.target.value)}
+        />
+        <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="Not Started">Not Started</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Completed">Completed</option>
+        </select>
+        <button onClick={handleRequest}>
+          Submit Request
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+import re
 
 from app.database.dependencies import get_db
 from app.models.task import Task
@@ -11,18 +12,38 @@ from app.schemas.schemas import (
 
 router = APIRouter()
 
+# URL validation regex
+URL_REGEX = re.compile(
+    r'^(?:http|ftp)s?://' # http:// or https://
+    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|' # domain...
+    r'localhost|' # localhost...
+    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
+    r'(?::\d+)?' # optional port
+    r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
+def validate_url(url: str):
+    if not url:
+        return
+    if not URL_REGEX.match(url):
+        raise HTTPException(status_code=400, detail="Invalid URL format. Please provide a valid URL starting with http:// or https://")
+
 
 @router.post("/tasks", response_model=TaskResponse)
 def create_task(
     task: TaskCreate,
     db: Session = Depends(get_db)
 ):
+    if task.update_url:
+        validate_url(task.update_url)
 
     new_task = Task(
         title=task.title,
         description=task.description,
         assigned_to=task.assigned_to,
-        status="Not Started"
+        status="Not Started",
+        priority=task.priority,
+        eta=task.eta,
+        update_url=task.update_url
     )
 
     db.add(new_task)
