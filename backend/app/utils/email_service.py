@@ -8,6 +8,7 @@ BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 BREVO_SENDER_EMAIL = os.getenv("BREVO_SENDER_EMAIL", "taskallotment298@gmail.com")
 
 
+
 def send_account_email(receiver_email, trainee_name, trainee_email, password):
 
     url = "https://api.brevo.com/v3/smtp/email"
@@ -20,8 +21,13 @@ def send_account_email(receiver_email, trainee_name, trainee_email, password):
 
     payload = {
         "sender": {
+<<<<<<< HEAD
             "name": "Task Allotment System",
             "email": BREVO_SENDER_EMAIL
+=======
+            "name": "Task Allotment System webapp",
+            "email": "dangimahima94@gmail.com"
+>>>>>>> 7a6b858 (fixes)
         },
         "to": [
             {
