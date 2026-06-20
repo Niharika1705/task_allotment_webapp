@@ -14,6 +14,32 @@ function AdminDashboard() {
   const [assignedTo, setAssignedTo] = useState("");
   const [users, setUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalErrors, setModalErrors] = useState({});
+
+  const validateEtaValue = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return "Please enter a valid ETA date.";
+    }
+
+    const now = new Date();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    if (date < startOfToday) {
+      return "ETA date cannot be in the past.";
+    }
+
+    const currentYear = now.getFullYear();
+    const maxYear = currentYear + 5;
+    const year = date.getFullYear();
+
+    if (year < currentYear || year > maxYear) {
+      return `ETA year must be between ${currentYear} and ${maxYear}.`;
+    }
+    return "";
+  };
 
   // Form states matching inline triggers
   const [taskTitle, setTaskTitle] = useState("");
@@ -133,14 +159,29 @@ function AdminDashboard() {
 
   const handleModalSubmit = async (e) => {
     e.preventDefault();
-    if (!taskTitle.trim() || !assignedTo) {
-      alert("Please provide a Title and select a Trainee.");
-      return;
+    
+    const newErrors = {};
+    if (!taskTitle.trim()) {
+      newErrors.title = "Title is required.";
     }
+    if (!assignedTo) {
+      newErrors.assignedTo = "Assignee must be selected.";
+    }
+    
+    const etaError = validateEtaValue(modalEta);
+    if (etaError) {
+      newErrors.eta = etaError;
+    }
+    
     if (modalUpdateUrl && !validateURL(modalUpdateUrl)) {
-      alert("Please enter a valid URL (starting with http:// or https://) for the Task Update URL.");
+      newErrors.updateUrl = "Please enter a valid URL (starting with http:// or https://) for the Task Update URL.";
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setModalErrors(newErrors);
       return;
     }
+    
     try {
       await API.post("/tasks", {
         title: taskTitle,
@@ -155,6 +196,7 @@ function AdminDashboard() {
       setPriority("Medium");
       setModalEta("");
       setModalUpdateUrl("");
+      setModalErrors({});
       setIsModalOpen(false);
       fetchTasks();
       alert("Task Created and Assigned Successfully!");
@@ -247,6 +289,13 @@ function AdminDashboard() {
   const notStartedTasks = filteredTasks.filter(t => !t.status || t.status.toLowerCase() === 'not started' || t.status.toLowerCase() === 'to do');
   const inProgressTasks = filteredTasks.filter(t => t.status && (t.status.toLowerCase() === 'in progress' || t.status.toLowerCase() === 'on progress'));
   const completedTasks = filteredTasks.filter(t => t.status && (t.status.toLowerCase() === 'completed' || t.status.toLowerCase() === 'done'));
+
+  const pad = (num) => String(num).padStart(2, "0");
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const currentYearVal = todayDate.getFullYear();
+  const minDateTime = `${currentYearVal}-${pad(todayDate.getMonth() + 1)}-${pad(todayDate.getDate())}T00:00`;
+  const maxDateTime = `${currentYearVal + 5}-12-31T23:59`;
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -366,15 +415,12 @@ function AdminDashboard() {
 
           <div className="dashboard-section">
             <h2>Quick Assign Task</h2>
-            <div className="task-form">
-              <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
-                <option value="">Select Target Trainee</option>
-                {users.filter((u) => u.role === "trainee").map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
-              <TaskForm addTask={addTask} />
-            </div>
+            <TaskForm 
+              addTask={addTask} 
+              users={users} 
+              assignedTo={assignedTo} 
+              setAssignedTo={setAssignedTo} 
+            />
           </div>
         </div>
 
@@ -494,26 +540,68 @@ function AdminDashboard() {
         {isModalOpen && (
           <div className="modal-overlay">
             <div className="modal-card">
-              <button className="close-modal-btn" onClick={() => setIsModalOpen(false)}>✕</button>
+              <button className="close-modal-btn" onClick={() => { setIsModalOpen(false); setModalErrors({}); }}>✕</button>
               <h2>Add New Task</h2>
-              <form onSubmit={handleModalSubmit}>
+              <form onSubmit={handleModalSubmit} noValidate>
+                <div className="form-required-note">* Required Fields</div>
+                
                 <div className="form-group">
-                  <label>Title</label>
-                  <input type="text" placeholder="Task Title" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} required />
+                  <label>Title <span className="required-asterisk">*</span></label>
+                  <input 
+                    type="text" 
+                    className={modalErrors.title ? "input-error" : ""}
+                    placeholder="Task Title" 
+                    value={taskTitle} 
+                    onChange={(e) => {
+                      setTaskTitle(e.target.value);
+                      if (e.target.value.trim()) {
+                        setModalErrors(prev => ({ ...prev, title: "" }));
+                      } else {
+                        setModalErrors(prev => ({ ...prev, title: "Title is required." }));
+                      }
+                    }} 
+                    onBlur={(e) => {
+                      if (!e.target.value.trim()) {
+                        setModalErrors(prev => ({ ...prev, title: "Title is required." }));
+                      }
+                    }}
+                    required
+                    aria-required="true"
+                  />
+                  {modalErrors.title && <span className="error-message">{modalErrors.title}</span>}
                 </div>
                 <div className="form-group">
-                  <label>Description</label>
+                  <label>Description (Optional)</label>
                   <textarea placeholder="Add details..." value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} />
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Assign Trainee</label>
-                    <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} required>
+                    <label>Assign Trainee <span className="required-asterisk">*</span></label>
+                    <select 
+                      className={modalErrors.assignedTo ? "input-error" : ""}
+                      value={assignedTo} 
+                      onChange={(e) => {
+                        setAssignedTo(e.target.value);
+                        if (e.target.value) {
+                          setModalErrors(prev => ({ ...prev, assignedTo: "" }));
+                        } else {
+                          setModalErrors(prev => ({ ...prev, assignedTo: "Assignee must be selected." }));
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (!e.target.value) {
+                          setModalErrors(prev => ({ ...prev, assignedTo: "Assignee must be selected." }));
+                        }
+                      }}
+                      required
+                      aria-required="true"
+                    >
                       <option value="">Select Candidate</option>
                       {users.filter(u => u.role === 'trainee').map(user => (
                         <option key={user.id} value={user.id}>{user.name}</option>
                       ))}
                     </select>
+                    {modalErrors.assignedTo && <span className="error-message">{modalErrors.assignedTo}</span>}
                   </div>
                   <div className="form-group">
                     <label>Priority</label>
@@ -525,21 +613,64 @@ function AdminDashboard() {
                   </div>
                 </div>
                 <div className="form-group">
-                  <label>ETA (Completion Date & Time)</label>
+                  <label>ETA (Completion Date & Time) (Optional)</label>
                   <input 
                     type="datetime-local" 
+                    className={modalErrors.eta ? "input-error" : ""}
                     value={modalEta} 
-                    onChange={(e) => setModalEta(e.target.value)} 
+                    min={minDateTime}
+                    max={maxDateTime}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setModalEta(val);
+                      if (val) {
+                        const error = validateEtaValue(val);
+                        setModalErrors(prev => ({ ...prev, eta: error }));
+                      } else {
+                        if (e.target.validity && e.target.validity.badInput) {
+                          setModalErrors(prev => ({ ...prev, eta: "Please enter a valid ETA date." }));
+                        } else {
+                          setModalErrors(prev => ({ ...prev, eta: "" }));
+                        }
+                      }
+                    }} 
+                    onBlur={(e) => {
+                      const val = e.target.value;
+                      const error = validateEtaValue(val);
+                      if (error) {
+                        setModalErrors(prev => ({ ...prev, eta: error }));
+                      } else if (e.target.validity && e.target.validity.badInput) {
+                        setModalErrors(prev => ({ ...prev, eta: "Please enter a valid ETA date." }));
+                      } else {
+                        setModalErrors(prev => ({ ...prev, eta: "" }));
+                      }
+                    }}
                   />
+                  {modalErrors.eta && <span className="error-message">{modalErrors.eta}</span>}
                 </div>
                 <div className="form-group">
-                  <label>Task Update URL</label>
+                  <label>Task Update URL (Optional)</label>
                   <input 
                     type="url" 
+                    className={modalErrors.updateUrl ? "input-error" : ""}
                     placeholder="https://example.com/submit-work" 
                     value={modalUpdateUrl} 
-                    onChange={(e) => setModalUpdateUrl(e.target.value)} 
+                    onChange={(e) => {
+                      setModalUpdateUrl(e.target.value);
+                      if (modalErrors.updateUrl) {
+                        setModalErrors(prev => ({ ...prev, updateUrl: "" }));
+                      }
+                    }} 
+                    onBlur={(e) => {
+                      const val = e.target.value;
+                      if (val && !validateURL(val)) {
+                        setModalErrors(prev => ({ ...prev, updateUrl: "Please enter a valid URL (starting with http:// or https://) for the Task Update URL." }));
+                      } else {
+                        setModalErrors(prev => ({ ...prev, updateUrl: "" }));
+                      }
+                    }}
                   />
+                  {modalErrors.updateUrl && <span className="error-message">{modalErrors.updateUrl}</span>}
                 </div>
                 <button type="submit" className="submit-project-btn">Create Project Task</button>
               </form>
