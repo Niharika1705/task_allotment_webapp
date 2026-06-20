@@ -9,29 +9,39 @@ function Login() {
   const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      alert("Please fill in both fields");
-      return;
-    }
-    try {
-      const res = await API.post("/login", { email, password });
-      if (res.data.success) {
-        alert(res.data.message);
-        localStorage.setItem("user", JSON.stringify(res.data));
 
-        if (res.data.role === "admin") {
-          navigate("/admin");
-        } else {
-          navigate("/trainee");
-        }
+  if (!email || !password) {
+    alert("Please fill in both fields");
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailRegex.test(email)) {
+    alert("Please enter a valid email address");
+    return;
+  }
+
+  try {
+    const res = await API.post("/login", { email, password });
+
+    if (res.data.success) {
+      alert(res.data.message);
+      localStorage.setItem("user", JSON.stringify(res.data));
+
+      if (res.data.role === "admin") {
+        navigate("/admin");
       } else {
-        alert(res.data.message || "Login Failed");
+        navigate("/trainee");
       }
-    } catch (error) {
-      alert("Login Failed");
-      console.error(error);
+    } else {
+      alert(res.data.message || "Login Failed");
     }
-  };
+  } catch (error) {
+    alert("Login Failed");
+    console.error(error);
+  }
+};
 
   const autofill = (type) => {
     if (type === "admin") {

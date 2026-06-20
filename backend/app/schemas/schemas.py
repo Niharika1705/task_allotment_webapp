@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class UserCreate(BaseModel):
@@ -17,7 +17,7 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 class TaskCreate(BaseModel):
     title: str
