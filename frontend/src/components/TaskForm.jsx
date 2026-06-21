@@ -121,6 +121,11 @@ function TaskForm({ addTask, users, assignedTo, setAssignedTo }) {
     if (etaError) {
       newErrors.eta = etaError;
     }
+    const titleRegex= /[a-zA-Z]/;
+    if(!titleRegex.test(taskName)){
+      alert("task tiltle must contain letters");
+      return;
+    }
 
     if (updateUrl && !validateURL(updateUrl)) {
       newErrors.updateUrl = "Please enter a valid URL (starting with http:// or https://) for the Task Update URL.";
